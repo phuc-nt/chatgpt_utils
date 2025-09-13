@@ -1,0 +1,8 @@
+# Placeholder for Extension Icons
+
+Cần tạo các icon files:
+- icon-16.png (16x16px)
+- icon-48.png (48x48px)  
+- icon-128.png (128x128px)
+
+Icons sẽ được tạo sau khi hoàn thành MVP core functionality.

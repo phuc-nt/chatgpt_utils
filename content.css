@@ -1,0 +1,103 @@
+/* ChatGPT Smart Follow-up Styles */
+
+.chatgpt-followup-container {
+  margin: 12px 0 !important;
+  padding: 12px !important;
+  background: #f7f7f8 !important;
+  border: 1px solid #e5e5e7 !important;
+  border-radius: 8px !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif !important;
+  font-size: 14px !important;
+  box-sizing: border-box !important;
+}
+
+.chatgpt-followup-header {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: #374151 !important;
+  margin: 0 0 8px 0 !important;
+  padding: 0 !important;
+}
+
+.chatgpt-followup-buttons {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+.chatgpt-followup-btn {
+  background: #fff !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+  font-weight: 400 !important;
+  color: #374151 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+  display: inline-block !important;
+  box-sizing: border-box !important;
+  outline: none !important;
+}
+
+.chatgpt-followup-btn:hover {
+  background: #f3f4f6 !important;
+  border-color: #9ca3af !important;
+  transform: translateY(-1px) !important;
+}
+
+.chatgpt-followup-btn:active {
+  background: #e5e7eb !important;
+  transform: translateY(0) !important;
+}
+
+.chatgpt-followup-btn:focus {
+  box-shadow: 0 0 0 2px #3b82f6 !important;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .chatgpt-followup-container {
+    background: #2d2d30 !important;
+    border-color: #444654 !important;
+  }
+  
+  .chatgpt-followup-header {
+    color: #d1d5db !important;
+  }
+  
+  .chatgpt-followup-btn {
+    background: #40414f !important;
+    border-color: #565869 !important;
+    color: #d1d5db !important;
+  }
+  
+  .chatgpt-followup-btn:hover {
+    background: #565869 !important;
+    border-color: #6b7280 !important;
+  }
+  
+  .chatgpt-followup-btn:active {
+    background: #4b5563 !important;
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .chatgpt-followup-container {
+    margin: 8px 0 !important;
+    padding: 10px !important;
+  }
+  
+  .chatgpt-followup-buttons {
+    gap: 4px !important;
+  }
+  
+  .chatgpt-followup-btn {
+    font-size: 11px !important;
+    padding: 5px 10px !important;
+  }
+}
