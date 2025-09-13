@@ -345,7 +345,7 @@ class ChatGPTFollowupExtension {
       if (this.autoSend) {
         setTimeout(() => {
           this.autoSendMessageWithValidation(0); // Keep retry limit
-        }, 1000);
+        }, 2000); // Increase delay to 2 seconds to avoid rate limiting
       } else {
         console.log('[ChatGPT Followup] Auto-send disabled, chỉ populate text');
       }
@@ -492,10 +492,21 @@ class ChatGPTFollowupExtension {
       return;
     }
     
-    // Check if textarea still has content
-    const textarea = document.querySelector('textarea[name="prompt-textarea"]');
-    if (!textarea || !textarea.value.trim()) {
-      console.warn('[ChatGPT Followup] Textarea empty, skipping auto-send');
+    // Check if input still has content (support both textarea and contenteditable)
+    const inputElement = document.querySelector('#prompt-textarea') || 
+                        document.querySelector('textarea[name="prompt-textarea"]');
+    
+    if (!inputElement) {
+      console.warn('[ChatGPT Followup] Input element not found, skipping auto-send');
+      return;
+    }
+    
+    const inputContent = inputElement.contentEditable === 'true' 
+      ? inputElement.textContent.trim()
+      : inputElement.value.trim();
+      
+    if (!inputContent) {
+      console.warn('[ChatGPT Followup] Input empty, skipping auto-send');
       return;
     }
     
