@@ -97,6 +97,20 @@
 - ✅ Click-to-populate functionality working
 - ✅ Extension ready for Chrome Web Store
 
+## ⚠️ Known Issues & Future Improvements
+**Network Rate Limiting**: ChatGPT backend occasionally returns `getNodeByIdOrMessageId` errors during auto-send. This appears to be ChatGPT server-side rate limiting, not extension issues. Extension functionality remains intact.
+
+**Mitigations Applied**:
+- ✅ Increased auto-send delay from 1s to 2s  
+- ✅ Added better input validation for contenteditable elements
+- ✅ Fixed selector compatibility with modern ChatGPT interface
+
+**Future Sprint Considerations**:
+- Add retry logic for network failures
+- Implement exponential backoff for auto-send
+- Add user feedback for network issues
+- Consider auto-send toggle in popup UI
+
 **Next Sprint**: Advanced AI-powered follow-up generation with real ChatGPT API integration
 
 ***
