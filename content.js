@@ -318,34 +318,19 @@ class ChatGPTFollowupExtension {
       // Check if it's contenteditable div or textarea
       if (inputElement.contentEditable === 'true') {
         // For contenteditable div (ProseMirror)
-        this.setContentEditableValue(inputElement, followupText);
+        this.simulateNaturalPaste(inputElement, followupText);
       } else {
         // For traditional textarea
-        // Method 1: Clipboard paste approach (most reliable)
-        this.pasteTextIntoTextarea(inputElement, followupText);
-        
-        // Method 2: React controlled component approach
-        setTimeout(() => {
-          this.setReactTextareaValue(inputElement, followupText);
-        }, 50);
-        
-        // Method 3: Direct manipulation với backup
-        setTimeout(() => {
-          inputElement.value = followupText;
-          inputElement.focus();
-          
-          // Trigger React synthetic events
-          this.triggerReactEvents(inputElement, followupText);
-          
-          console.log('[ChatGPT Followup] Textarea value after set:', inputElement.value);
-        }, 100);
+        this.simulateNaturalPaste(inputElement, followupText);
       }
       
       // Auto-send after successful input (nếu enabled)
       if (this.autoSend) {
+        // Random delay giống human hesitation: 1.5-3s
+        const humanDelay = 1500 + Math.random() * 1500;
         setTimeout(() => {
-          this.autoSendMessageWithValidation(0); // Keep retry limit
-        }, 2000); // Increase delay to 2 seconds to avoid rate limiting
+          this.autoSendMessageWithValidation(0);
+        }, humanDelay);
       } else {
         console.log('[ChatGPT Followup] Auto-send disabled, chỉ populate text');
       }
@@ -357,130 +342,112 @@ class ChatGPTFollowupExtension {
     }
   }
 
-  gentleTextInput(textarea, text) {
-    console.log('[ChatGPT Followup] Using gentle input method');
+  simulateNaturalPaste(inputElement, text) {
+    console.log('[ChatGPT Followup] Simulating natural paste behavior');
     
-    // Simple approach: focus + clear + set value + single input event
-    textarea.focus();
-    textarea.click();
+    // Split text thành 2 phần như user paste từng đoạn
+    const parts = this.splitTextForPasting(text);
     
-    // Clear and set value
-    textarea.value = '';
-    textarea.value = text;
-    
-    // Single comprehensive input event
-    const inputEvent = new InputEvent('input', {
-      bubbles: true,
-      inputType: 'insertText',
-      data: text
+    parts.forEach((part, index) => {
+      // Random delay between parts (100-300ms)
+      const delay = index === 0 ? 0 : 100 + Math.random() * 200;
+      
+      setTimeout(() => {
+        // Focus element
+        inputElement.focus();
+        
+        if (inputElement.contentEditable === 'true') {
+          // For contenteditable (ProseMirror)
+          this.pasteIntoContentEditable(inputElement, part, index === 0);
+        } else {
+          // For textarea
+          this.pasteIntoTextarea(inputElement, part, index === 0);
+        }
+      }, delay);
     });
+  }
+  
+  splitTextForPasting(text) {
+    // Chia thành 2 phần tự nhiên nếu text dài
+    if (text.length < 50) {
+      return [text]; // Text ngắn thì paste 1 lần
+    }
     
-    textarea.dispatchEvent(inputEvent);
+    // Tìm điểm chia tự nhiên (sentence boundary)
+    const midPoint = text.indexOf('. ');
+    const questionPoint = text.indexOf('? ');
+    const commaPoint = text.indexOf(', ');
+    
+    let splitPoint = -1;
+    
+    // Ưu tiên sentence boundary gần giữa text
+    if (midPoint > 20 && midPoint < text.length - 10) {
+      splitPoint = midPoint + 1;
+    } else if (questionPoint > 20 && questionPoint < text.length - 10) {
+      splitPoint = questionPoint + 1;
+    } else if (commaPoint > 20 && commaPoint < text.length - 10) {
+      splitPoint = commaPoint + 1;
+    }
+    
+    if (splitPoint > 0) {
+      return [
+        text.substring(0, splitPoint).trim(),
+        text.substring(splitPoint).trim()
+      ];
+    }
+    
+    return [text]; // Nếu không chia được thì 1 lần
+  }
+  
+  pasteIntoContentEditable(element, text, clearFirst = false) {
+    if (clearFirst) {
+      element.innerHTML = '';
+    }
+    
+    // Create paragraph with text
+    const p = document.createElement('p');
+    p.textContent = text;
+    element.appendChild(p);
+    
+    // Single natural paste event
+    element.dispatchEvent(new ClipboardEvent('paste', {
+      bubbles: true,
+      clipboardData: new DataTransfer()
+    }));
     
     // Set cursor to end
-    textarea.setSelectionRange(text.length, text.length);
+    const range = document.createRange();
+    const selection = window.getSelection();
+    range.setStart(p, p.childNodes.length);
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
     
-    console.log('[ChatGPT Followup] Gentle input completed:', textarea.value);
+    console.log('[ChatGPT Followup] Pasted into contenteditable:', text);
   }
-
-  async pasteTextIntoTextarea(textarea, text) {
-    try {
-      // Focus textarea first
-      textarea.focus();
-      textarea.click();
-      
-      console.log('[ChatGPT Followup] Attempting clipboard paste method');
-      
-      // Method A: Use execCommand if supported
-      if (document.queryCommandSupported && document.queryCommandSupported('insertText')) {
-        textarea.value = '';
-        textarea.focus();
-        document.execCommand('insertText', false, text);
-        console.log('[ChatGPT Followup] Used execCommand insertText');
-        return;
-      }
-      
-      // Method B: Clipboard API (newer browsers)
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(text);
-        
-        // Clear existing content
-        textarea.select();
-        
-        // Simulate Ctrl+V
-        const pasteEvent = new KeyboardEvent('keydown', {
-          bubbles: true,
-          cancelable: true,
-          key: 'v',
-          code: 'KeyV',
-          ctrlKey: true,
-          metaKey: false
-        });
-        
-        textarea.dispatchEvent(pasteEvent);
-        
-        // Also try paste event
-        const clipboardEvent = new ClipboardEvent('paste', {
-          bubbles: true,
-          cancelable: true,
-          clipboardData: new DataTransfer()
-        });
-        
-        clipboardEvent.clipboardData.setData('text/plain', text);
-        textarea.dispatchEvent(clipboardEvent);
-        
-        console.log('[ChatGPT Followup] Used clipboard API method');
-        return;
-      }
-      
-      // Method C: Character-by-character typing simulation
-      this.simulateTyping(textarea, text);
-      
-    } catch (error) {
-      console.warn('[ChatGPT Followup] Clipboard paste failed:', error);
-      this.simulateTyping(textarea, text);
+  
+  pasteIntoTextarea(textarea, text, clearFirst = false) {
+    if (clearFirst) {
+      textarea.value = '';
     }
+    
+    // Append text như paste behavior
+    const currentValue = textarea.value;
+    textarea.value = currentValue + text;
+    
+    // Single natural paste event
+    textarea.dispatchEvent(new ClipboardEvent('paste', {
+      bubbles: true,
+      clipboardData: new DataTransfer()
+    }));
+    
+    // Set cursor to end
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+    
+    console.log('[ChatGPT Followup] Pasted into textarea:', text);
   }
 
-  simulateTyping(textarea, text) {
-    console.log('[ChatGPT Followup] Simulating character typing');
-    
-    // Clear existing content
-    textarea.value = '';
-    textarea.focus();
-    
-    // Type each character with delay
-    let index = 0;
-    const typeChar = () => {
-      if (index < text.length) {
-        const char = text[index];
-        
-        // Add character
-        textarea.value = textarea.value + char;
-        
-        // Create input event for this character
-        const inputEvent = new InputEvent('input', {
-          bubbles: true,
-          inputType: 'insertText',
-          data: char
-        });
-        
-        textarea.dispatchEvent(inputEvent);
-        
-        index++;
-        setTimeout(typeChar, 10); // 10ms delay between characters
-      } else {
-        // Finished typing
-        console.log('[ChatGPT Followup] Typing simulation complete');
-        textarea.focus();
-        
-        // Final events
-        textarea.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-    };
-    
-    typeChar();
-  }
+  // Xóa các methods cũ không còn sử dụng
 
   autoSendMessageWithValidation(retryCount = 0) {
     const maxRetries = 5; // Maximum 5 retries to prevent infinite loop
@@ -573,23 +540,9 @@ class ChatGPTFollowupExtension {
 
         console.log('[ChatGPT Followup] Clicking send button');
         
-        // Multiple click methods để đảm bảo
-        sendButton.focus();
+        // CHỈ 1 event, giống user thật - CLEAN SINGLE CLICK
         sendButton.click();
-        
-        // Also trigger mousedown/mouseup events
-        sendButton.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
-        sendButton.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
-        sendButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-        
-        // Keyboard event backup (Enter key)
-        sendButton.dispatchEvent(new KeyboardEvent('keydown', {
-          bubbles: true,
-          key: 'Enter',
-          code: 'Enter'
-        }));
-
-        console.log('[ChatGPT Followup] Message sent successfully');
+        console.log('[ChatGPT Followup] Message sent with single clean click');
         
       } catch (error) {
         console.error('[ChatGPT Followup] Error clicking send button:', error);
@@ -602,32 +555,7 @@ class ChatGPTFollowupExtension {
     }
   }
 
-  setContentEditableValue(element, text) {
-    console.log('[ChatGPT Followup] Setting contenteditable value');
-    
-    // Focus element
-    element.focus();
-    
-    // Clear existing content
-    element.innerHTML = '';
-    
-    // Create paragraph with text
-    const p = document.createElement('p');
-    p.textContent = text;
-    element.appendChild(p);
-    
-    // Trigger input events
-    element.dispatchEvent(new Event('input', { bubbles: true }));
-    element.dispatchEvent(new Event('change', { bubbles: true }));
-    
-    // Set cursor to end
-    const range = document.createRange();
-    const selection = window.getSelection();
-    range.setStart(p, p.childNodes.length);
-    range.collapse(true);
-    selection.removeAllRanges();
-    selection.addRange(range);
-  }
+  // Xóa method cũ
 
   fallbackSendWithEnter() {
     console.log('[ChatGPT Followup] Fallback: Using Enter key to send');
@@ -659,84 +587,7 @@ class ChatGPTFollowupExtension {
     }
   }
 
-  setReactTextareaValue(textarea, value) {
-    try {
-      // Get React fiber node
-      const reactKey = Object.keys(textarea).find(key => key.startsWith('__reactInternalInstance$') || key.startsWith('__reactFiber$'));
-      
-      if (reactKey) {
-        const reactInstance = textarea[reactKey];
-        
-        // Try to access React props and update value
-        if (reactInstance && reactInstance.memoizedProps) {
-          console.log('[ChatGPT Followup] Found React instance, updating props');
-          
-          // Create synthetic event
-          const syntheticEvent = new Event('input', { bubbles: true });
-          syntheticEvent.target = textarea;
-          syntheticEvent.target.value = value;
-          
-          // Set the value directly
-          textarea.value = value;
-          
-          // Trigger onChange if exists
-          if (reactInstance.memoizedProps.onChange) {
-            reactInstance.memoizedProps.onChange(syntheticEvent);
-          }
-          
-          // Trigger onInput if exists  
-          if (reactInstance.memoizedProps.onInput) {
-            reactInstance.memoizedProps.onInput(syntheticEvent);
-          }
-        }
-      }
-    } catch (error) {
-      console.warn('[ChatGPT Followup] React method failed:', error);
-    }
-  }
-
-  triggerReactEvents(textarea, value) {
-    // Comprehensive event triggering cho React components
-    const events = [
-      { type: 'focus', bubbles: true },
-      { type: 'input', bubbles: true, data: value },
-      { type: 'change', bubbles: true },
-      { type: 'keydown', bubbles: true, key: 'Enter' },
-      { type: 'keyup', bubbles: true, key: 'Enter' }
-    ];
-
-    events.forEach(eventConfig => {
-      let event;
-      
-      if (eventConfig.type === 'input' && typeof InputEvent !== 'undefined') {
-        event = new InputEvent(eventConfig.type, {
-          bubbles: eventConfig.bubbles,
-          inputType: 'insertText',
-          data: eventConfig.data
-        });
-      } else if (eventConfig.key) {
-        event = new KeyboardEvent(eventConfig.type, {
-          bubbles: eventConfig.bubbles,
-          key: eventConfig.key,
-          code: eventConfig.key === 'Enter' ? 'Enter' : eventConfig.key
-        });
-      } else {
-        event = new Event(eventConfig.type, { bubbles: eventConfig.bubbles });
-      }
-      
-      // Set target value for events
-      Object.defineProperty(event, 'target', {
-        value: textarea,
-        writable: false
-      });
-      
-      textarea.dispatchEvent(event);
-    });
-    
-    // Final focus và selection
-    textarea.focus();
-    textarea.setSelectionRange(value.length, value.length);
-  }
+  // Xóa các React manipulation methods cũ - không còn cần thiết
 
   removeExistingFollowups() {
     if (this.followupContainer) {
